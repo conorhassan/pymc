@@ -316,8 +316,10 @@ def seeded_numpy_distribution_builder(dist_name: str) -> Callable:
 
 class TestGaussianRandomWalk(BaseTestDistributionRandom):
     pymc_dist = pm.GaussianRandomWalk
-    pymc_dist_params = {"mu": 1.0, "steps": 2, "sigma": 3, "init": 1}
-    expected_rv_op_params = {"mu": 1.0, "sigma": 3, "init": 1, "steps": 2}
+    pymc_dist_params = {"mu": 1.0, "sigma": 2, "init": None, "steps": 4}
+
+    # TODO(Ravin) I need to create an Aesara op for a normal dist here and feed that in somehow
+    expected_rv_op_params = {"mu": 1.0, "sigma": 2, "init": None, "steps": 4}
     # reference_dist_params = {"b": 1.0, "kappa": 1.0, "mu": 0.0}
 
     checks_to_run = [
