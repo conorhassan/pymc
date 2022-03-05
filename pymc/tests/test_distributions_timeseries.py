@@ -65,7 +65,7 @@ class TestGaussianRandomWalk:
         test_vals = [0, 1, 2]
         vals = at.vector("vals")
         mu = 1
-        sigma = 1
+        sigma = 2
         init = pm.Normal.dist(0, sigma)
 
         with pm.Model():
@@ -79,7 +79,7 @@ class TestGaussianRandomWalk:
             + stats.norm(mu, sigma).logpdf(np.diff(test_vals)).sum()
         )
 
-        np.testing.assert_almost_equal(logp_eval, logp_reference)
+        np.testing.assert_almost_equal(logp_eval, logp_reference, decimal=6)
 
     def test_grw_inference(self):
         mu, sigma, steps = 2, 1, 10000
