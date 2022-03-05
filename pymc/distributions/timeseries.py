@@ -158,6 +158,11 @@ class GaussianRandomWalk(distribution.Continuous):
         sigma = at.as_tensor_variable(floatX(sigma))
         steps = at.as_tensor_variable(intX(steps))
 
+        if "shape" in kwargs.keys():
+            shape = kwargs["shape"]
+        else:
+            shape = None
+
         if init is None:
             init = Normal.dist(mu, sigma, size=size)
         else:
