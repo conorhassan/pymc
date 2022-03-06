@@ -163,6 +163,7 @@ class GaussianRandomWalk(distribution.Continuous):
         else:
             shape = None
 
+        # If no scalar distribution is passed then initialize with a Normal of same sd and mu
         if init is None:
             init = Normal.dist(mu, sigma, size=size)
         else:
