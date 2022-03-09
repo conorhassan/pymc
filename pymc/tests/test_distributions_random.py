@@ -314,42 +314,6 @@ def seeded_numpy_distribution_builder(dist_name: str) -> Callable:
     )
 
 
-class TestGaussianRandomWalk(BaseTestDistributionRandom):
-    # Override default size for test class
-    size = None
-
-    pymc_dist = pm.GaussianRandomWalk
-    pymc_dist_params = {"mu": 1.0, "sigma": 2, "init": pm.Constant.dist(0), "steps": 4}
-    expected_rv_op_params = {"mu": 1.0, "sigma": 2, "init": pm.Constant.dist(0), "steps": 4}
-    # reference_dist_params = {"b": 1.0, "kappa": 1.0, "mu": 0.0}
-
-    checks_to_run = [
-        "check_pymc_params_match_rv_op",
-        "check_rv_inferred_size",
-    ]
-
-    def check_rv_inferred_size(self):
-        steps = self.pymc_dist_params["steps"]
-        sizes_to_check = [
-            None,
-            (),
-            1,
-            (1,),
-        ]
-        sizes_expected = [(steps + 1,), (steps + 1,), (1, steps + 1), (1, steps + 1)]
-        # sizes_to_check = [None, (), 1, (1,), 5, (4, 5), (2, 4, 2)]
-        # sizes_expected = [(), (), (1,), (1,), (5,), (4, 5), (2, 4, 2)]
-
-        for size, expected in zip(sizes_to_check, sizes_expected):
-            pymc_rv = self.pymc_dist.dist(**self.pymc_dist_params, size=size)
-            expected_symbolic = tuple(pymc_rv.shape.eval())
-            assert expected_symbolic == expected
-
-    def check_not_implemented(self):
-        with pytest.raises(NotImplementedError):
-            self.pymc_rv.eval()
-
-
 class TestHalfFlat(BaseTestDistributionRandom):
     pymc_dist = pm.HalfFlat
     pymc_dist_params = {}
