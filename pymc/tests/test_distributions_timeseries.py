@@ -33,8 +33,7 @@ from pymc.distributions.timeseries import (
 from pymc.model import Model
 from pymc.sampling import sample, sample_posterior_predictive
 from pymc.tests.helpers import select_by_precision
-
-from .test_distributions_random import BaseTestDistributionRandom
+from pymc.tests.test_distributions_random import BaseTestDistributionRandom
 
 
 class TestGaussianRandomWalk:
