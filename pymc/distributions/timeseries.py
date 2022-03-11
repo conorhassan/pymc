@@ -209,7 +209,7 @@ class GaussianRandomWalk(distribution.Continuous):
         init_logp = logprob.logp(init, value[..., 0])
 
         # Make time series stationary around the mean value
-        stationary_series = at.diff(value, axis=-1)
+        stationary_series = value[..., 1:] - value[..., :-1]
         series_logp = logprob.logp(Normal.dist(mu, sigma), stationary_series)
 
         return init_logp + series_logp.sum(axis=-1)
