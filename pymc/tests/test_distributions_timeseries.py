@@ -11,8 +11,6 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
-
-import aesara.tensor as at
 import numpy as np
 import pytest
 
@@ -131,7 +129,6 @@ class TestGaussianRandomWalk(BaseTestDistributionRandom):
     pymc_dist = pm.GaussianRandomWalk
     pymc_dist_params = {"mu": 1.0, "sigma": 2, "init": pm.Constant.dist(0), "steps": 4}
     expected_rv_op_params = {"mu": 1.0, "sigma": 2, "init": pm.Constant.dist(0), "steps": 4}
-    # reference_dist_params = {"b": 1.0, "kappa": 1.0, "mu": 0.0}
 
     checks_to_run = [
         "check_pymc_params_match_rv_op",

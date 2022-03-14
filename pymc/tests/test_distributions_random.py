@@ -261,6 +261,11 @@ class BaseTestDistributionRandom(SeededTest):
         for (expected_name, expected_value), actual_variable in zip(
             self.expected_rv_op_params.items(), aesara_dist_inputs
         ):
+
+            # Add additional line to evaluate symbolic inputs to distributions
+            if isinstance(expected_value, aesara.tensor.Variable):
+                expected_value = expected_value.eval()
+
             assert_almost_equal(expected_value, actual_variable.eval(), decimal=self.decimal)
 
     def check_rv_size(self):
