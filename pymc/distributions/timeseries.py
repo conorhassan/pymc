@@ -49,7 +49,7 @@ class GaussianRandomWalkRV(RandomVariable):
     dtype = "floatX"
     _print_name = ("GaussianRandomWalk", "\\operatorname{GaussianRandomWalk}")
 
-    def _shape_from_params(self, dist_params, reop_param_idx=0, param_shapes=None):
+    def _supp_shape_from_params(self, dist_params, reop_param_idx=0, param_shapes=None):
         steps = dist_params[3]
 
         # TODO: Ask ricardo why this is correct. Isn't shape different if size is passed?
