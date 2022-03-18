@@ -52,7 +52,6 @@ class GaussianRandomWalkRV(RandomVariable):
     def _supp_shape_from_params(self, dist_params, reop_param_idx=0, param_shapes=None):
         steps = dist_params[3]
 
-        # TODO: Ask ricardo why this is correct. Isn't shape different if size is passed?
         return (steps + 1,)
 
     @classmethod
