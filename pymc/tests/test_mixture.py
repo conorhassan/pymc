@@ -20,6 +20,7 @@ import pytest
 import scipy.stats as st
 
 from aesara import tensor as at
+from aesara.tensor.random.op import RandomVariable
 from numpy.testing import assert_allclose
 from scipy.special import logsumexp
 
@@ -57,15 +58,15 @@ from pymc.tests.test_distributions_moments import assert_moment_is_expected
 from pymc.tests.test_distributions_random import pymc_random
 
 
-def generate_normal_mixture_data(w, mu, sd, size=1000):
+def generate_normal_mixture_data(w, mu, sigma, size=1000):
     component = np.random.choice(w.size, size=size, p=w)
-    mu, sd = np.broadcast_arrays(mu, sd)
+    mu, sigma = np.broadcast_arrays(mu, sigma)
     out_size = to_tuple(size) + mu.shape[:-1]
     mu_ = np.array([mu[..., comp] for comp in component.ravel()])
-    sd_ = np.array([sd[..., comp] for comp in component.ravel()])
+    sigma_ = np.array([sigma[..., comp] for comp in component.ravel()])
     mu_ = np.reshape(mu_, out_size)
-    sd_ = np.reshape(sd_, out_size)
-    x = np.random.normal(mu_, sd_, size=out_size)
+    sigma_ = np.reshape(sigma_, out_size)
+    x = np.random.normal(mu_, sigma_, size=out_size)
 
     return x
 
@@ -471,8 +472,8 @@ class TestMixture(SeededTest):
     def test_list_normals_sampling(self):
         norm_w = np.array([0.75, 0.25])
         norm_mu = np.array([0.0, 5.0])
-        norm_sd = np.ones_like(norm_mu)
-        norm_x = generate_normal_mixture_data(norm_w, norm_mu, norm_sd, size=1000)
+        norm_sigma = np.ones_like(norm_mu)
+        norm_x = generate_normal_mixture_data(norm_w, norm_mu, norm_sigma, size=1000)
 
         with Model() as model:
             w = Dirichlet("w", floatX(np.ones_like(norm_w)), shape=norm_w.size)
@@ -658,13 +659,64 @@ class TestMixture(SeededTest):
         with pytest.warns(UserWarning, match="Single component will be treated as a mixture"):
             Mixture.dist(w=[0.5, 0.5], comp_dists=[Normal.dist(size=2)])
 
+    def test_mixture_dtype(self):
+        mix_dtype = Mixture.dist(
+            w=[0.5, 0.5],
+            comp_dists=[
+                Multinomial.dist(n=5, p=[0.5, 0.5]),
+                Multinomial.dist(n=5, p=[0.5, 0.5]),
+            ],
+        ).dtype
+        assert mix_dtype == "int64"
+
+        mix_dtype = Mixture.dist(
+            w=[0.5, 0.5],
+            comp_dists=[
+                Dirichlet.dist(a=[0.5, 0.5]),
+                Dirichlet.dist(a=[0.5, 0.5]),
+            ],
+        ).dtype
+        assert mix_dtype == aesara.config.floatX
+
+    @pytest.mark.parametrize(
+        "comp_dists, expected_shape",
+        [
+            (
+                [
+                    Normal.dist([[0, 0, 0], [0, 0, 0]]),
+                    Normal.dist([0, 0, 0]),
+                    Normal.dist([0]),
+                ],
+                (2, 3),
+            ),
+            (
+                [
+                    Dirichlet.dist([[1, 1, 1], [1, 1, 1]]),
+                    Dirichlet.dist([1, 1, 1]),
+                ],
+                (2, 3),
+            ),
+        ],
+    )
+    def test_broadcast_components(self, comp_dists, expected_shape):
+        n_dists = len(comp_dists)
+        mix = Mixture.dist(w=np.ones(n_dists) / n_dists, comp_dists=comp_dists)
+        mix_eval = mix.eval()
+        assert tuple(mix_eval.shape) == expected_shape
+        assert np.unique(mix_eval).size == mix.eval().size
+        for comp_dist in mix.owner.inputs[2:]:
+            # We check that the input is a "pure" RandomVariable and not a broadcast
+            # operation. This confirms that all draws will be unique
+            assert isinstance(comp_dist.owner.op, RandomVariable)
+            assert tuple(comp_dist.shape.eval()) == expected_shape
+
 
 class TestNormalMixture(SeededTest):
     def test_normal_mixture_sampling(self):
         norm_w = np.array([0.75, 0.25])
         norm_mu = np.array([0.0, 5.0])
-        norm_sd = np.ones_like(norm_mu)
-        norm_x = generate_normal_mixture_data(norm_w, norm_mu, norm_sd, size=1000)
+        norm_sigma = np.ones_like(norm_mu)
+        norm_x = generate_normal_mixture_data(norm_w, norm_mu, norm_sigma, size=1000)
 
         with Model() as model:
             w = Dirichlet("w", floatX(np.ones_like(norm_w)), shape=norm_w.size)
@@ -694,7 +746,7 @@ class TestNormalMixture(SeededTest):
         test_mus = np.random.randn(*comp_shape)
         test_taus = np.random.gamma(1, 1, size=comp_shape)
         observed = generate_normal_mixture_data(
-            w=np.ones(ncomp) / ncomp, mu=test_mus, sd=1 / np.sqrt(test_taus), size=10
+            w=np.ones(ncomp) / ncomp, mu=test_mus, sigma=1 / np.sqrt(test_taus), size=10
         )
 
         with Model() as model0:

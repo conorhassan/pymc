@@ -289,15 +289,10 @@ class AR(distribution.Continuous):
         distribution for initial values (Defaults to Flat())
     """
 
-    def __init__(
-        self, rho, sigma=None, tau=None, constant=False, init=None, sd=None, *args, **kwargs
-    ):
+    def __init__(self, rho, sigma=None, tau=None, constant=False, init=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        if sd is not None:
-            sigma = sd
-
         tau, sigma = get_tau_sigma(tau=tau, sigma=sigma)
-        self.sigma = self.sd = at.as_tensor_variable(sigma)
+        self.sigma = at.as_tensor_variable(sigma)
         self.tau = at.as_tensor_variable(tau)
 
         self.mean = at.as_tensor_variable(0.0)
@@ -460,8 +455,8 @@ class EulerMaruyama(distribution.Continuous):
         xt = x[:-1]
         f, g = self.sde_fn(x[:-1], *self.sde_pars)
         mu = xt + self.dt * f
-        sd = at.sqrt(self.dt) * g
-        return at.sum(Normal.dist(mu=mu, sigma=sd).logp(x[1:]))
+        sigma = at.sqrt(self.dt) * g
+        return at.sum(Normal.dist(mu=mu, sigma=sigma).logp(x[1:]))
 
     def _distr_parameters_for_repr(self):
         return ["dt"]

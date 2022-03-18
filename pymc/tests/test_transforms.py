@@ -296,7 +296,7 @@ class TestElementWiseLogp(SeededTest):
         x_val_untransf = at.constant(test_array_untransf).type()
 
         jacob_det = transform.log_jac_det(test_array_transf, *x.owner.inputs)
-        assert joint_logpt(x, sum=False).ndim == x.ndim == jacob_det.ndim
+        assert joint_logpt(x, sum=False)[0].ndim == x.ndim == jacob_det.ndim
 
         v1 = joint_logpt(x, x_val_transf, jacobian=False).eval({x_val_transf: test_array_transf})
         v2 = joint_logpt(x, x_val_untransf, transformed=False).eval(
@@ -319,10 +319,10 @@ class TestElementWiseLogp(SeededTest):
         jacob_det = transform.log_jac_det(test_array_transf, *x.owner.inputs)
         # Original distribution is univariate
         if x.owner.op.ndim_supp == 0:
-            assert joint_logpt(x, sum=False).ndim == x.ndim == (jacob_det.ndim + 1)
+            assert joint_logpt(x, sum=False)[0].ndim == x.ndim == (jacob_det.ndim + 1)
         # Original distribution is multivariate
         else:
-            assert joint_logpt(x, sum=False).ndim == (x.ndim - 1) == jacob_det.ndim
+            assert joint_logpt(x, sum=False)[0].ndim == (x.ndim - 1) == jacob_det.ndim
 
         a = joint_logpt(x, x_val_transf, jacobian=False).eval({x_val_transf: test_array_transf})
         b = joint_logpt(x, x_val_untransf, transformed=False).eval(
@@ -332,15 +332,15 @@ class TestElementWiseLogp(SeededTest):
         close_to(a, b, np.abs(0.5 * (a + b) * tol))
 
     @pytest.mark.parametrize(
-        "sd,size",
+        "sigma,size",
         [
             (2.5, 2),
             (5.0, (2, 3)),
             (np.ones(3) * 10.0, (4, 3)),
         ],
     )
-    def test_half_normal(self, sd, size):
-        model = self.build_model(pm.HalfNormal, {"sd": sd}, size=size, transform=tr.log)
+    def test_half_normal(self, sigma, size):
+        model = self.build_model(pm.HalfNormal, {"sigma": sigma}, size=size, transform=tr.log)
         self.check_transform_elementwise_logp(model)
 
     @pytest.mark.parametrize("lam,size", [(2.5, 2), (5.0, (2, 3)), (np.ones(3), (4, 3))])
@@ -421,7 +421,7 @@ class TestElementWiseLogp(SeededTest):
     def test_normal_ordered(self):
         model = self.build_model(
             pm.Normal,
-            {"mu": 0.0, "sd": 1.0},
+            {"mu": 0.0, "sigma": 1.0},
             size=3,
             initval=np.asarray([-1.0, 1.0, 4.0]),
             transform=tr.ordered,
@@ -429,17 +429,17 @@ class TestElementWiseLogp(SeededTest):
         self.check_vectortransform_elementwise_logp(model)
 
     @pytest.mark.parametrize(
-        "sd,size",
+        "sigma,size",
         [
             (2.5, (2,)),
             (np.ones(3), (4, 3)),
         ],
     )
-    def test_half_normal_ordered(self, sd, size):
+    def test_half_normal_ordered(self, sigma, size):
         initval = np.sort(np.abs(np.random.randn(*size)))
         model = self.build_model(
             pm.HalfNormal,
-            {"sd": sd},
+            {"sigma": sigma},
             size=size,
             initval=initval,
             transform=tr.Chain([tr.log, tr.ordered]),

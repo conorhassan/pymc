@@ -473,7 +473,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
                 # 3) you can create variables with Var method
                 self.Var('v1', Normal.dist(mu=mean, sigma=sd))
-                # this will create variable named like '{prefix_}v1'
+                # this will create variable named like '{prefix/}v1'
                 # and assign attribute 'v1' to instance created
                 # variable can be accessed with self.v1 or self['v1']
 
@@ -482,7 +482,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
                 Normal('v2', mu=mean, sigma=sd)
 
                 # something more complex is allowed, too
-                half_cauchy = HalfCauchy('sd', beta=10, initval=1.)
+                half_cauchy = HalfCauchy('sigma', beta=10, initval=1.)
                 Normal('v3', mu=mean, sigma=half_cauchy)
 
                 # Deterministic variables can be used in usual way
@@ -514,6 +514,8 @@ class Model(WithMemoization, metaclass=ContextMeta):
         with Model() as model:
             CustomModel(mean=1, name='first')
             CustomModel(mean=2, name='second')
+
+        # variables inside both scopes will be named like `first/*`, `second/*`
 
     """
 
@@ -749,11 +751,10 @@ class Model(WithMemoization, metaclass=ContextMeta):
                         f"Requested variable {var} not found among the model variables"
                     )
 
-        rv_logps = []
+        rv_logps: List[TensorVariable] = []
         if rv_values:
             rv_logps = joint_logpt(list(rv_values.keys()), rv_values, sum=False, jacobian=jacobian)
-            if not isinstance(rv_logps, list):
-                rv_logps = [rv_logps]
+            assert isinstance(rv_logps, list)
 
         # Replace random variables by their value variables in potential terms
         potential_logps = []
@@ -1444,8 +1445,9 @@ class Model(WithMemoization, metaclass=ContextMeta):
         if dims is not None:
             if isinstance(dims, str):
                 dims = (dims,)
-            if any(dim not in self.coords and dim is not None for dim in dims):
-                raise ValueError(f"Dimension {dim} is not specified in `coords`.")
+            for dim in dims:
+                if dim not in self.coords and dim is not None:
+                    raise ValueError(f"Dimension {dim} is not specified in `coords`.")
             if any(var.name == dim for dim in dims):
                 raise ValueError(f"Variable `{var.name}` has the same name as its dimension label.")
             self._RV_dims[var.name] = dims
@@ -1455,14 +1457,18 @@ class Model(WithMemoization, metaclass=ContextMeta):
             setattr(self, self.name_of(var.name), var)
 
     @property
-    def prefix(self):
-        return f"{self.name}_" if self.name else ""
+    def prefix(self) -> str:
+        if self.isroot or not self.parent.prefix:
+            name = self.name
+        else:
+            name = f"{self.parent.prefix}/{self.name}"
+        return name.strip("/")
 
     def name_for(self, name):
         """Checks if name has prefix and adds if needed"""
         if self.prefix:
             if not name.startswith(self.prefix):
-                return f"{self.prefix}{name}"
+                return f"{self.prefix}/{name}"
             else:
                 return name
         else:
@@ -1472,8 +1478,8 @@ class Model(WithMemoization, metaclass=ContextMeta):
         """Checks if name has prefix and deletes if needed"""
         if not self.prefix or not name:
             return name
-        elif name.startswith(self.prefix):
-            return name[len(self.prefix) :]
+        elif name.startswith(self.prefix + "/"):
+            return name[len(self.prefix) + 1 :]
         else:
             return name
 

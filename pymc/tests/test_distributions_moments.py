@@ -133,6 +133,9 @@ def test_rv_size_is_none():
     rv = Normal.dist(0, 1, size=None)
     assert rv_size_is_none(rv.owner.inputs[1])
 
+    rv = Normal.dist(0, 1, size=())
+    assert rv_size_is_none(rv.owner.inputs[1])
+
     rv = Normal.dist(0, 1, size=1)
     assert not rv_size_is_none(rv.owner.inputs[1])
 
@@ -624,17 +627,17 @@ def test_constant_moment(c, size, expected):
 
 
 @pytest.mark.parametrize(
-    "psi, theta, size, expected",
+    "psi, mu, size, expected",
     [
-        (0.9, 3.0, None, 2),
+        (0.9, 3.0, None, 3),
         (0.8, 2.9, 5, np.full(5, 2)),
         (0.2, np.arange(1, 5) * 5, None, np.arange(1, 5)),
         (0.2, np.arange(1, 5) * 5, (2, 4), np.full((2, 4), np.arange(1, 5))),
     ],
 )
-def test_zero_inflated_poisson_moment(psi, theta, size, expected):
+def test_zero_inflated_poisson_moment(psi, mu, size, expected):
     with Model() as model:
-        ZeroInflatedPoisson("x", psi=psi, theta=theta, size=size)
+        ZeroInflatedPoisson("x", psi=psi, mu=mu, size=size)
     assert_moment_is_expected(model, expected)
 
 
@@ -1305,22 +1308,22 @@ def test_polyagamma_moment(h, z, size, expected):
             np.array([[4, 6, 0, 0], [4, 2, 2, 2]]),
         ),
         (
+            np.array([0.3, 0.6, 0.05, 0.05]),
+            np.array([2, 10]),
+            (1, 2),
+            np.array([[[1, 1, 0, 0], [4, 6, 0, 0]]]),
+        ),
+        (
             np.array([[0.25, 0.25, 0.25, 0.25], [0.26, 0.26, 0.26, 0.22]]),
             np.array([1, 10]),
             None,
             np.array([[1, 0, 0, 0], [2, 3, 3, 2]]),
         ),
         (
-            np.array([0.26, 0.26, 0.26, 0.22]),
-            np.array([1, 10]),
-            None,
-            np.array([[1, 0, 0, 0], [2, 3, 3, 2]]),
-        ),
-        (
             np.array([[0.25, 0.25, 0.25, 0.25], [0.26, 0.26, 0.26, 0.22]]),
             np.array([1, 10]),
-            (2, 2),
-            np.full((2, 2, 4), [[1, 0, 0, 0], [2, 3, 3, 2]]),
+            (3, 2),
+            np.full((3, 2, 4), [[1, 0, 0, 0], [2, 3, 3, 2]]),
         ),
     ],
 )
@@ -1335,7 +1338,13 @@ def test_multinomial_moment(p, n, size, expected):
     [
         (0.2, 10, 3, None, 2),
         (0.2, 10, 4, 5, np.full(5, 2)),
-        (0.4, np.arange(1, 5), np.arange(2, 6), None, np.array([0, 0, 1, 1])),
+        (
+            0.4,
+            np.arange(1, 5),
+            np.arange(2, 6),
+            None,
+            np.array([0, 1, 1, 2] if aesara.config.floatX == "float64" else [0, 0, 1, 1]),
+        ),
         (
             np.linspace(0.2, 0.6, 3),
             np.arange(1, 10, 4),
@@ -1461,10 +1470,16 @@ def test_lkjcholeskycov_moment(n, eta, size, expected):
         (np.array([3, 6, 0.5, 0.5]), 2, None, np.array([1, 1, 0, 0])),
         (np.array([30, 60, 5, 5]), 10, None, np.array([4, 6, 0, 0])),
         (
-            np.array([[26, 26, 26, 22]]),  # Dim: 1 x 4
-            np.array([[1], [10]]),  # Dim: 2 x 1
+            np.array([[30, 60, 5, 5], [26, 26, 26, 22]]),
+            10,
+            (1, 2),
+            np.array([[[4, 6, 0, 0], [2, 3, 3, 2]]]),
+        ),
+        (
+            np.array([26, 26, 26, 22]),
+            np.array([1, 10]),
             None,
-            np.array([[[1, 0, 0, 0]], [[2, 3, 3, 2]]]),  # Dim: 2 x 1 x 4
+            np.array([[1, 0, 0, 0], [2, 3, 3, 2]]),
         ),
         (
             np.array([[26, 26, 26, 22]]),  # Dim: 1 x 4
