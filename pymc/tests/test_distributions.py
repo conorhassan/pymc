@@ -2620,7 +2620,7 @@ class TestMatchesScipy:
     def test_grw(self):
         self.check_logp(
             pm.GaussianRandomWalk,
-            R,
+            Vector(R, 10)
             {"mu": R, "sigma": Rplus, "steps": Nat},
             lambda value, mu, sigma: sp.norm.logpdf(value, mu, sigma).cumsum().sum(),
             decimal=select_by_precision(float64=6, float32=1),
